@@ -13,6 +13,13 @@ from nacl.public import PrivateKey, Box
 
 #debug
 
+
+str = 'Hello yes I am a human lol'
+print(str[:2])
+print(str[:50].strip())
+
+exit()
+
 sk = PrivateKey.generate()
 pk = sk.public_key
 
