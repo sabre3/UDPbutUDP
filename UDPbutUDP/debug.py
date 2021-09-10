@@ -6,6 +6,7 @@ import nacl.secret
 import nacl.encoding
 import numpy as np
 import socket
+import math
 from nacl.hash import blake2b
 from nacl.public import PrivateKey, Box
 
@@ -13,6 +14,25 @@ from nacl.public import PrivateKey, Box
 
 #debug
 
+
+test = 'abcdefg lmao ccool string lol!' #30
+
+max = math.ceil(len(test) / 3)
+index = 1
+
+while index <= max:
+
+    chunk = index * 3
+    base = chunk - 3
+
+    unit = test[base:chunk]
+
+    print(unit)
+
+    index += 1
+
+
+exit()
 
 str = 'Hello yes I am a human lol'
 print(str[:2])

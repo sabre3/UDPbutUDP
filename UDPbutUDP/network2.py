@@ -1,6 +1,7 @@
 #UDP server, contact sending, and everything else you need for truly connectionless data transfer
 
 #python modules
+import math
 import socket
 import socketserver
 import threading
@@ -55,6 +56,7 @@ from nacl.public import PrivateKey, PublicKey, Box
 # 2 byte id = 0
 # 4 byte unit index == 0
 # 2 byte type == 2
+# 2 byte id = contact id
 # 24 byte nonce pre
 #  - 4 byte index chunks
 #
@@ -107,6 +109,7 @@ class Contact:
         s.remote_id = remote_id
         s.pk = pk
         s.nonce_pre = 0
+        s.units = []
         
         #init DH key
         box = Box(sk, PublicKey(pk))
@@ -137,8 +140,19 @@ class Contact:
 
             index += 1
 
+    #send peice
+    def send_data_peice(s, data, index):
+        
+        #send peice
+        id = s.remote_id.to_bytes(2, byteorder='big', signed=False)
+        #add header
+        unit = id + index + data
+
+        #send unit
+        s.socket.sendto(data, s.address)
+
     #send new data packet
-    def __send_new_data(s, cunit):
+    def send_new_data(s, cunit):
 
         id = b'\x00\x00' #special 0 id
         index = len(cunit.map).to_bytes(4, byteorder='big', signed=False) #map length
@@ -156,7 +170,7 @@ class Contact:
         s.socket.sendto(data, s.address)
 
     #send new contact packet
-    def __send_new_contact(s, have):
+    def send_new_contact(s, have):
 
         id = b'\x00\x00' #special 0 id
         index = b'\x00\x00\x00\x00' #0 index
@@ -177,10 +191,21 @@ class Contact:
         s.socket.sendto(data, s.address)
 
     #send missing data packets
-    def __send_miss_request(s, missed):
-        #TODO
+    def send_miss_request(s, missed):
         #send packets requesting resend of missing packets
-        pass
+        
+        id = b'\x00\x00' #special 0 id
+        index = b'\x00\x00\x00\x00' #0 index
+        type = b'\x00\x02' #special type 2
+        nonce = s.nonce_pre.to_bytes(24, byteorder='big', signed=False)
+
+        data = id + index + type + nonce
+
+        for ind in missed:
+            index = ind.to_bytes(4, byteorder='big', signed=False)
+            data = data + index
+
+        s.socket.sendto(data, s.address)
 
 #Base CUnit class
 class CUnit:
@@ -270,10 +295,10 @@ class CCUnit(CUnit):
     #writes data to map
     def write_data(s, data):
 
-        max = len(data)
+        max = math.ceil(len(data) / 500)
         index = 1 # this offset disgusts me lol
 
-        while index < max:
+        while index <= max:
 
             #read 500 byte chunk
             chunk = index * 500
@@ -411,3 +436,147 @@ class DCUnit(CUnit):
             data = data + unit
 
         return data
+
+#Threaded mixin for UDPServer
+class ThreadedUDPServer(socketserver.ThreadingMixIn, socketserver.UDPServer):    
+    pass
+
+#UDPHandler which handles each packet as a new thread. Each handle call is also inside a try-except
+class UDPHandler(socketserver.BaseRequestHandler):
+    
+    #handle data accordingly. Format is [data, socket] for udp
+    def handle(self):
+
+        unit = self.request[0]
+        socket = self.request[1]
+
+        #decontruct header
+        id = int.from_bytes(unit[0:2], byteorder='big', signed=False)
+        index = int.from_bytes(unit[2:6], byteorder='big', signed=False)
+
+        #handle if special packet
+        if id == 0:
+            #check special packet type
+            type = int.from_bytes(unit[6:8], byteorder='big', signed=False)
+            data = unit[8:]
+
+            #new contact info
+            if type == 0:
+                
+                key = data[0:32]
+                remote_id = data[32:34]
+                exchange = int.from_bytes(data[34:35], byteorder='big', signed=False)
+
+                #create new contact and add to list
+                contact = Contact(socket, self.client_address, len(clients), remote_id, key)
+                contacts.append(contact)
+
+                #send contact info if exchange == 0
+                if exchange == 0:
+                    contact.send_new_contact(True)
+
+            #new data send info
+            elif type == 1:
+                #load info
+                local_id = data[0:2]
+                nonce_pre = data[2:26]
+                signature = data[26:28]
+
+                #get contact
+                contact = contacts[local_id]
+
+                #create DCunit
+                dcunit = DCUnit(contact.box, contact.nonce_pre, contact.local_id, index)
+
+                #plaintext checksum
+                checksum = id + index + type + local_id + nonce_pre
+
+                #verify signature
+                verif = dcunit.decrypt(signature, 0)
+
+                #drop packet if fail
+                if verif != checksum:
+                    return
+
+                #add dcunit to contact
+                contact.units.append(dcunit)
+
+            #missing data request
+            elif type == 2:
+
+                #load data
+                local_id = data[0:2]
+                nonce_pre = data[2:26]
+                chunks = data[26:]
+
+                #get contact and ccunit
+                contact = contacts[local_id]
+
+                for unit in contact.units:
+                    if unit.nonce_pre == nonce_pre and type(unit.__name__) == CCUnit:
+                        ccunit = unit
+
+                #read 4 byte chunks
+                index = 1
+
+                while index < math.ceil(len(chunks) / 4):
+                    
+                    chunk = index * 4
+                    base = chunk - 4
+
+                    peice = int.to_bytes(chunks[base:chunk])
+
+                    #send unit
+                    unit = ccunit.map[peice]
+                    contact.send_data_peice(unit, peice)
+
+        #handle if regualr packet
+        else:
+            
+            cipher = unit[6:]
+
+            #get contact and dcunit
+            contact = contacts[local_id]
+
+            for unit in contact.units:
+                if unit.nonce_pre == nonce_pre and type(unit.__name__) == DCUnit:
+                    dcunit = unit
+
+            #add data
+            add = dcunit.add_unit(unit)
+
+            #print if complete
+            if add:
+                print(dcunit.read())
+
+        
+
+#Starts UDPServer
+def start():
+
+    #globals
+    global private_key
+    private_key =  PrivateKey.generate()
+    global public_key
+    public_key = private_key.public_key
+    global contacts
+    contacts = [None]
+    
+    server = ThreadedUDPServer(('127.0.0.1', 9193), UDPHandler)
+
+    with server:
+        ip, port = server.server_address
+        print(ip, port)
+
+        server_thread = threading.Thread(target=server.serve_forever)
+        server_thread.daemon = True
+        server_thread.start()
+        print("Server loop running in thread:", server_thread.name)
+
+        #press enter to exit
+        input()
+
+        server.shutdown()
+
+if __name__ == '__main__':
+    start()
