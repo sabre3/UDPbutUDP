@@ -15,6 +15,17 @@ from nacl.public import PrivateKey, Box
 #debug
 
 
+keypair = ('lmao', 'haha')
+print(keypair[0])
+
+exit()
+
+nonce_prefix =  b'\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' #\x00\x00\x00\x00
+nonce_prefix = nonce_prefix + b'\x00\x00\x00\x00'
+print(nonce_prefix)
+
+exit()
+
 test = 'abcdefg lmao ccool string lol!' #30
 
 max = math.ceil(len(test) / 3)
