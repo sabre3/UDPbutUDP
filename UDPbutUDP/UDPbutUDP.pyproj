@@ -31,6 +31,9 @@
     <Compile Include="network2.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="network3.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="UDPbutUDP.py" />
   </ItemGroup>
   <ItemGroup>

@@ -530,7 +530,7 @@ class UDPHandler(socketserver.BaseRequestHandler):
                     unit = ccunit.map[peice]
                     contact.send_data_peice(unit, peice)
 
-        #handle if regualr packet
+        #handle if regular packet
         else:
             
             cipher = unit[6:]
@@ -547,9 +547,7 @@ class UDPHandler(socketserver.BaseRequestHandler):
 
             #print if complete
             if add:
-                print(dcunit.read())
-
-        
+                print(dcunit.read())  
 
 #Starts UDPServer
 def start():
