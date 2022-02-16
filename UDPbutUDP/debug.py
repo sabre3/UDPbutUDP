@@ -9,11 +9,24 @@ import socket
 import math
 from nacl.hash import blake2b
 from nacl.public import PrivateKey, Box
-
+import io
 
 
 #debug
 
+
+
+
+stream = io.BytesIO(b'')
+
+stream.seek(32)
+stream.write(b'lmao!')
+stream.seek(0)
+
+print(stream.read())
+
+
+exit()
 
 keypair = ('lmao', 'haha')
 print(keypair[0])
