@@ -324,7 +324,7 @@ class UDPHandler(socketserver.BaseRequestHandler):
         #decontruct contact id header
         id = int.from_bytes(unit[0:2], byteorder='big', signed=False)
         
-        #special id = o packet handling
+        #special id = 0 packet handling
         if id == 0:
             real_id = int.from_bytes(unit[2:4], byteorder='big', signed=False)
 
@@ -343,8 +343,6 @@ class UDPHandler(socketserver.BaseRequestHandler):
         #regular data packet
         else:
             index = int.from_bytes(unit[2:6], byteorder='big', signed=False)
-
- 
 
 #Starts UDPServer
 def start():
