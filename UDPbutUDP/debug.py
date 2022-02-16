@@ -18,6 +18,23 @@ from nacl.public import PrivateKey, Box
 keypair = ('lmao', 'haha')
 print(keypair[0])
 
+print()
+
+nonce_pre = 1
+nonce = 5
+
+npx = nonce_pre.to_bytes(20, byteorder='big', signed=False)
+nx = nonce.to_bytes(4, byteorder='big', signed=False)
+
+print(npx)
+print(nx)
+
+bigx = npx + b'\x00\x00\x00\x00'
+print(bigx)
+
+big = int.from_bytes(bigx, byteorder='big', signed=False)
+print(big)
+
 exit()
 
 nonce_prefix =  b'\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' #\x00\x00\x00\x00
