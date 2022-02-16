@@ -334,8 +334,23 @@ class UDPHandler(socketserver.BaseRequestHandler):
                 key = unit[4:38]
                 signed = unit[38:]
 
-                new_id = len(contacts)
+                #verify signature
+                v_key = VerifyKey(key)
 
+                try:
+                    c_data = v_key.verify(signed)
+                    remote_id = c_data[0:2]
+                    send_return = c_data[2:3]
+
+                except:
+                    print('New contact verifictaion failed')
+                    return
+
+                #create new id
+
+                new_id = len(contacts)
+                contact = Contact(socket, self.client_address, new_id, remote_id, (private_key, key))
+                contacts.append(contact)
 
             else:
                 pass
