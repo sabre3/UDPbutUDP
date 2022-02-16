@@ -1,0 +1,43 @@
+Diagram of the packet format
+Further explanation of vars at bottom
+
+! indicates encryption, !! indicates end of encryption
+? indicates signed, ?? indicates end of signed
+
+
+Normal Packet:
+
+-------------------------------------------------------------------------
+bytes: |    2    |        4        |!   2    |  0+ (remaining MTU)  !!|
+data:  |    id   |   unit_index    |!checksum|  payload             !!|
+
+
+
+Special Packet:
+
+------------------------------------------------------------------------------------------
+bytes: |    2    |    1    |
+data:  |   0000  |   type  |
+
+                           |        32        |?    20    |   2   |    1    ??|
+new contact:     |    00   |    public_key    |?nonce_pre |  r_id | need_id ??|
+
+                           |    2    |!   2    |    4*n    !!|
+data miss:       |    01   |    id   |!checksum|index_chunk!!| 
+
+                           |    2    |!     2     !!|
+end contact:     |    02   |    id   |!checksum_id!!|
+
+
+
+
+id = contact id of receiver = 1-65536 (cannot be zero)
+unit_index = index of unit of data being sent = 0-4,294,967,296
+checksum = checksum of following payload (implmentation uses blake2b)
+payload = data paylaod or special packet data
+public_key = public key of sender (implmentation uses curve25519)
+nonce_pre = nonce prefix to be used with the unit_index
+r_id = contact id of sender = 1-65536 (cannot be zero)
+need_id = sender needs receiver id = 0-1 (1 is need)
+index_chunk = list of indicies that need to be resent
+checksum_id = checksum on the special packet end id

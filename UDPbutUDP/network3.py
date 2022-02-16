@@ -56,7 +56,7 @@ from nacl.signing import SigningKey, VerifyKey
 # 2 byte id == 0
 # 2 byte id == > 0
 # 504 bytes encrypted chunk:
-#   2 byte blacke2b checksum
+#   2 byte blake2b checksum
 #   1 byte type
 #   20 byte nonce prefix
 #   - 4 byte index chunks
